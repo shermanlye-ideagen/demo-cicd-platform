@@ -19,6 +19,7 @@ import base64
 import json
 import os
 import sys
+import urllib.parse
 import urllib.request
 from datetime import date
 
