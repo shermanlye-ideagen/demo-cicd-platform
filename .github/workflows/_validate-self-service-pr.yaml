@@ -1,0 +1,67 @@
+name: Validate Self-Service PR
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  validate:
+    name: Validate Self-Service Changes
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'self-service')
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+
+      - name: Validate all config
+        id: validate
+        run: |
+          python scripts/validate-all.py --verbose 2>&1 | tee /tmp/validation-output.txt
+        continue-on-error: true
+
+      - name: Check diff scope
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "Changed files:" > /tmp/scope-check.txt
+          echo "${CHANGED}" >> /tmp/scope-check.txt
+          echo "" >> /tmp/scope-check.txt
+
+          if echo "${CHANGED}" | grep -q "^\.github/workflows/"; then
+            echo "WARNING: Self-service PR modifies workflow files — requires manual review" >> /tmp/scope-check.txt
+          fi
+
+          UNEXPECTED=$(echo "${CHANGED}" | grep -v -E '^(products/|config/|\.resolved/|tenants/)' || true)
+          if [ -n "${UNEXPECTED}" ]; then
+            echo "WARNING: Modifies unexpected files: ${UNEXPECTED}" >> /tmp/scope-check.txt
+          fi
+
+          cat /tmp/scope-check.txt
+
+      - name: AI Policy Explanation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          git diff origin/main...HEAD > /tmp/self-service-diff.txt
+          python scripts/ai-review.py \
+            --diff /tmp/self-service-diff.txt \
+            --product "self-service" \
+            --standards config/platform-standards.yaml \
+            --boundaries config/conventions/self-service-boundaries.yaml \
+            --mode self-service \
+            --validation-output /tmp/validation-output.txt \
+            --scope-check /tmp/scope-check.txt
+
+      - name: Post Review Comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file /tmp/ai-review-output.md

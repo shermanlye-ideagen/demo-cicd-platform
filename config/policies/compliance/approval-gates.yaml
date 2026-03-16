@@ -1,0 +1,19 @@
+name: approval-gates
+description: "Production deployments always require CAB approval. Staging requires GitHub reviewers."
+severity: error
+applies_when:
+  tier: [bronze, silver, gold]
+generates:
+  _approval_rules:
+    test:
+      approval: none
+    perftest:
+      approval: none
+    staging:
+      approval: github-reviewers
+    prod:
+      approval: cab
+    demo:
+      approval: none
+    demo-eu:
+      approval: none

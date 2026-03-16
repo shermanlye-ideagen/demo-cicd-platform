@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ideagen.com/schemas/cicd/product-schema.json",
+  "title": "Product Registration",
+  "description": "Standardized product registration. 5 required fields. Platform auto-detects and resolves everything else. No product-level customization.",
+  "type": "object",
+  "required": ["name", "team", "tier", "repo", "tenancy"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]+$",
+      "description": "Unique product identifier (lowercase, hyphens allowed)"
+    },
+    "displayName": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Human-readable product name"
+    },
+    "team": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]+$",
+      "description": "Owning team identifier"
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["bronze", "silver", "gold"],
+      "description": "Product governance tier — determines CI/CD policies and quality gates"
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$",
+      "description": "GitHub repo path (e.g. ideagenplc/my-app)"
+    },
+    "tenancy": {
+      "type": "string",
+      "enum": ["single", "multi"],
+      "description": "Deployment model: single-instance or multi-tenant"
+    },
+    "detectedStack": {
+      "type": "string",
+      "enum": ["nodejs", "python", "dotnet", "java", "php", "legacy-vm"],
+      "description": "Platform-detected tech stack. Set by platform during onboarding via detect-stack.py. Not editable by product teams."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive", "deprecated"],
+      "default": "active",
+      "description": "Product lifecycle status"
+    }
+  }
+}

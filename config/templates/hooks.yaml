@@ -1,0 +1,8 @@
+# Lifecycle hooks — runs in isolated sandboxed steps
+# Constraints: max_timeout=300s, no secret access
+
+hooks:
+  pre_build: []
+  post_build: []
+  pre_deploy: {}
+  post_deploy: {}

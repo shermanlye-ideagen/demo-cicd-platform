@@ -1,0 +1,10 @@
+{
+  "$schema": "../../config/schema/product-schema.json",
+  "name": "demo-product",
+  "displayName": "Demo Product",
+  "team": "platform-demo",
+  "tier": "silver",
+  "repo": "shermanlye-ideagen/demo-product",
+  "tenancy": "multi",
+  "detectedStack": "python"
+}

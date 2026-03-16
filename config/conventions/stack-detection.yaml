@@ -1,0 +1,90 @@
+# Convention: Stack Detection Rules
+# Maps file/directory markers in a product repo to its tech stack.
+# The resolver checks markers in order; first match wins.
+# Products can override with stackOverride in product.json.
+#
+# Two-pass detection:
+#   Pass 1: File marker scan → identifies top-level stack
+#   Pass 2: Content inspection → determines variant, version, OS
+
+rules:
+  - markers: ["*.csproj", "*.sln"]
+    stack: dotnet
+    build_tool: dotnet
+    confidence: 0.95
+    inspect:
+      - file: "*.csproj"
+        type: xml_element
+        element: "TargetFramework"
+        map:
+          "net48": { variant: framework, os: windows, version: "4.8" }
+          "net6.0": { variant: modern, os: linux, version: "6.0" }
+          "net7.0": { variant: modern, os: linux, version: "7.0" }
+          "net8.0": { variant: modern, os: linux, version: "8.0" }
+          "net9.0": { variant: modern, os: linux, version: "9.0" }
+        default: { variant: modern, os: linux }
+      - file: "host.json"
+        type: presence
+        set: { variant: azure-functions }
+
+  - markers: ["composer.json"]
+    stack: php
+    build_tool: composer
+    confidence: 0.95
+    inspect:
+      - file: "composer.json"
+        type: json_value
+        path: "require.php"
+        version_ranges:
+          "<7.0": { variant: legacy }
+          ">=7.0,<8.0": { variant: standard }
+          ">=8.0": { variant: modern }
+        default: { variant: standard }
+
+  - markers: ["package.json"]
+    stack: nodejs
+    build_tool: npm
+    confidence: 0.95
+    inspect:
+      - file: "serverless.yml"
+        type: presence
+        set: { variant: serverless }
+      - file: "angular.json"
+        type: presence
+        set: { variant: spa }
+      - file: "next.config.js"
+        type: presence
+        set: { variant: ssr }
+
+  - markers: ["pom.xml"]
+    stack: java
+    build_tool: maven
+    confidence: 0.95
+
+  - markers: ["build.gradle", "build.gradle.kts"]
+    stack: java
+    build_tool: gradle
+    confidence: 0.90
+
+  - markers: ["pyproject.toml"]
+    stack: python
+    build_tool: poetry
+    confidence: 0.90
+    inspect:
+      - file: "serverless.yml"
+        type: presence
+        set: { variant: serverless }
+
+  - markers: ["requirements.txt", "setup.py", "setup.cfg"]
+    stack: python
+    build_tool: pip
+    confidence: 0.85
+    inspect:
+      - file: "serverless.yml"
+        type: presence
+        set: { variant: serverless }
+
+fallback:
+  stack: legacy-vm
+  build_tool: custom
+  confidence: 0.50

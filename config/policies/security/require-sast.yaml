@@ -1,0 +1,11 @@
+name: require-sast
+description: "All silver and gold tier products must have SAST scanning via SonarQube"
+severity: error
+applies_when:
+  tier: [silver, gold]
+  stack: [nodejs, python, dotnet, java]
+generates:
+  pipeline:
+    sonarqube: true
+  sonarqube:
+    quality_gate: default

@@ -1,0 +1,58 @@
+# Convention: Tier Defaults
+# Defines what each tier gets by default.
+# Policies and traits can add more on top of these.
+
+bronze:
+  environments: [test, prod]
+  deploy_target: ecs
+  features: [basic-monitoring]
+  max_replicas: 2
+  requires_cab: false
+  pipeline:
+    sonarqube: false
+    newrelic: false
+    veracode_sbom: false
+    ai_code_review: false
+    e2e:
+      enabled: false
+    load_test:
+      enabled: false
+    fedramp: false
+
+silver:
+  environments: [test, staging, prod]
+  deploy_target: ecs
+  features: [sonarqube, newrelic, veracode-sbom]
+  max_replicas: 5
+  requires_cab: true
+  pipeline:
+    sonarqube: true
+    newrelic: true
+    veracode_sbom: true
+    ai_code_review: false
+    e2e:
+      enabled: true
+      framework: playwright
+    load_test:
+      enabled: true
+      framework: k6
+    fedramp: false
+
+gold:
+  environments: [test, perftest, staging, prod]
+  deploy_target: eks
+  features: [sonarqube, newrelic, veracode-sbom, ai-code-review, load-testing]
+  max_replicas: 20
+  requires_cab: true
+  pipeline:
+    sonarqube: true
+    newrelic: true
+    veracode_sbom: true
+    ai_code_review: true
+    e2e:
+      enabled: true
+      framework: playwright
+    load_test:
+      enabled: true
+      framework: k6
+    fedramp: false

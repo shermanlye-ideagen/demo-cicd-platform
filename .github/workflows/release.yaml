@@ -1,0 +1,128 @@
+name: AI-Enhanced Release
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create AI-Enhanced Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p' || echo "")
+          echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Get commit log
+        run: |
+          PREV_TAG="${{ steps.version.outputs.prev_tag }}"
+          if [ -n "$PREV_TAG" ]; then
+            git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges > /tmp/raw-commits.txt
+          else
+            git log --pretty=format:"- %s (%h)" --no-merges -20 > /tmp/raw-commits.txt
+          fi
+          echo "Commits since last tag:"
+          cat /tmp/raw-commits.txt
+
+      - name: Generate AI Release Notes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python -c "
+          import json, os, sys, urllib.request
+
+          with open('/tmp/raw-commits.txt') as f:
+              commits = f.read()
+
+          if not commits.strip():
+              with open('/tmp/ai-release-notes.md', 'w') as f:
+                  f.write('No changes since last release.')
+              sys.exit(0)
+
+          body = json.dumps({
+              'model': 'claude-sonnet-4-20250514',
+              'max_tokens': 2048,
+              'messages': [{
+                  'role': 'user',
+                  'content': f'''Generate professional release notes from these git commits.
+
+          Rules:
+          - Categorize into: ## Features, ## Bug Fixes, ## Improvements, ## Other
+          - Skip empty categories
+          - Add a 1-2 sentence summary at the very top
+          - Use bullet points with clear descriptions
+          - Be concise but informative
+
+          Commits:
+          {commits}'''
+              }]
+          }).encode()
+
+          req = urllib.request.Request(
+              'https://api.anthropic.com/v1/messages',
+              data=body,
+              headers={
+                  'Content-Type': 'application/json',
+                  'x-api-key': os.environ['ANTHROPIC_API_KEY'],
+                  'anthropic-version': '2023-06-01'
+              }
+          )
+          resp = json.loads(urllib.request.urlopen(req, timeout=60).read())
+          notes = resp['content'][0]['text']
+          with open('/tmp/ai-release-notes.md', 'w') as f:
+              f.write(notes)
+          print('AI release notes generated successfully')
+          "
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "Release ${{ steps.version.outputs.tag }}" \
+            --notes-file /tmp/ai-release-notes.md
+
+      - name: Create JIRA Version
+        if: vars.ATLASSIAN_BASE_URL != ''
+        env:
+          ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
+          ATLASSIAN_TOKEN: ${{ secrets.ATLASSIAN_TOKEN }}
+          ATLASSIAN_BASE_URL: ${{ vars.ATLASSIAN_BASE_URL }}
+        run: |
+          python scripts/release-jira.py \
+            --version "${{ steps.version.outputs.tag }}" \
+            --project-key "IDEVOPS" \
+            --base-url "$ATLASSIAN_BASE_URL"
+
+      - name: Create Confluence Release Page
+        if: vars.ATLASSIAN_BASE_URL != ''
+        env:
+          ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
+          ATLASSIAN_TOKEN: ${{ secrets.ATLASSIAN_TOKEN }}
+          ATLASSIAN_BASE_URL: ${{ vars.ATLASSIAN_BASE_URL }}
+        run: |
+          python scripts/release-confluence.py \
+            --version "${{ steps.version.outputs.tag }}" \
+            --product "demo-product" \
+            --release-notes-file /tmp/ai-release-notes.md \
+            --space "IDEVOPSP"

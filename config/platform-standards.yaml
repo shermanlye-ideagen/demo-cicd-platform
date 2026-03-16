@@ -1,0 +1,86 @@
+# Platform Standards — Central definition of enforced standards.
+# These values are non-negotiable. No product-level overrides.
+
+deploy_targets:
+  allowed: [eks, lambda]
+  default: eks
+  serverless_stacks: [nodejs-serverless, python-serverless]
+
+governance:
+  sast:
+    required: true
+    tool: sonarqube
+    applies_to: all_tiers
+  sbom:
+    required: true
+    applies_to: all_tiers
+  coverage_floors:
+    bronze: 0
+    silver: 60
+    gold: 80
+  approval_gates:
+    bronze:
+      dev: auto
+      prod: required
+    silver:
+      dev: auto
+      staging: required
+      prod: required
+    gold:
+      dev: auto
+      staging: required
+      prod: required
+
+product_interface:
+  allowed_files:
+    - ".platform/config.yaml"
+    - ".platform/hooks.yaml"
+  forbidden_patterns:
+    - "*.tf"
+    - "*.tfvars"
+    - "helm/"
+    - "charts/"
+    - "kustomization.yaml"
+    - ".cicd/"
+
+tenant_tiers:
+  bronze:
+    compute:
+      cpu_min: "256m"
+      cpu_max: "1"
+      memory_min: "512Mi"
+      memory_max: "1Gi"
+      replicas_min: 1
+      replicas_max: 3
+    database:
+      mode: shared
+      backup_days: 7
+    encryption: aws-managed
+  silver:
+    compute:
+      cpu_min: "500m"
+      cpu_max: "2"
+      memory_min: "1Gi"
+      memory_max: "2Gi"
+      replicas_min: 2
+      replicas_max: 10
+    database:
+      mode: dedicated
+      instance_class: db.t4g.medium
+      multi_az: false
+      backup_days: 14
+    encryption: aws-managed
+  gold:
+    compute:
+      cpu_min: "1"
+      cpu_max: "4"
+      memory_min: "2Gi"
+      memory_max: "4Gi"
+      replicas_min: 3
+      replicas_max: 20
+    database:
+      mode: dedicated
+      instance_class: db.r6g.large
+      multi_az: true
+      backup_days: 30
+    encryption: customer-managed-kms

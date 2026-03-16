@@ -1,0 +1,12 @@
+{
+  "$schema": "./schema/products-registry-schema.json",
+  "products": [
+    {
+      "name": "demo-product",
+      "repo": "shermanlye-ideagen/demo-product",
+      "team": "platform-demo",
+      "tier": "silver",
+      "status": "active"
+    }
+  ]
+}

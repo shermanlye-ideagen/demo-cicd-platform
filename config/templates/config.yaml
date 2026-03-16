@@ -1,0 +1,6 @@
+# Product configuration — customize within self-service boundaries
+# See: config/conventions/self-service-boundaries.yaml
+
+build_args: {}
+env_vars: {}
+feature_flags: {}

@@ -1,0 +1,212 @@
+# Convention: Self-Service Boundaries
+# Defines what product teams can and cannot customize in their .cicd/ files.
+# Protected fields are enforced by the platform; customizable fields are team-owned.
+
+# Fields that CANNOT be overridden by product teams.
+# These are set by platform policies and conventions.
+protected:
+  # Security policies — always enforced
+  security:
+    - pipeline.sonarqube          # SAST scanning (tier-dependent)
+    - pipeline.veracode_sbom      # SBOM generation (tier-dependent)
+    - pipeline.fedramp            # FedRAMP compliance
+    - security_blocks.sast        # Must be true in pipeline registration
+    - security_blocks.sbom        # Must be true in pipeline registration
+    - security_blocks.verify_security  # Must call _verify-security.yaml
+
+  # Account and environment mappings — platform-managed
+  accounts:
+    - environments.*.aws_account_id
+    - environments.*.subscription_id
+    - environments.*.resource_group
+    - environments.*.region
+
+  # Approval gates — policy-driven
+  approvals:
+    - environments.*.approval
+    - pipeline.requires_cab
+
+  # Tier-determined defaults that cannot be relaxed
+  tier:
+    - environments                # Which environments exist (from tier-defaults)
+    - deployTarget                # Deploy target (from routing convention)
+    - containerized               # Container vs non-container (from routing)
+
+# Fields that product teams CAN customize via .cicd/ files.
+customizable:
+  # Build configuration
+  build:
+    files: [config.yaml]
+    fields:
+      - build_args.*              # Custom build arguments
+      - env_vars.*                # Runtime environment variables
+      - feature_flags.*           # Feature flag toggles
+      - environment_overrides.*   # Per-environment config overrides
+
+  # Lifecycle hooks
+  hooks:
+    files: [hooks.yaml]
+    fields:
+      - hooks.pre_build           # Pre-build shell commands
+      - hooks.post_build          # Post-build shell commands
+      - hooks.pre_deploy.*        # Per-environment pre-deploy hooks
+      - hooks.post_deploy.*       # Per-environment post-deploy hooks
+    constraints:
+      max_timeout: 300            # Max hook timeout (seconds)
+      sandbox: true               # Hooks run in isolated steps
+      no_secret_access: true      # Cannot access platform secrets
+
+  # Custom test stages
+  tests:
+    files: [tests.yaml]
+    fields:
+      - stages.*                  # Custom test definitions
+    constraints:
+      max_timeout: 1800           # Max test timeout (30 min)
+      after_security: true        # Custom tests run after security gates
+
+  # Quality gates (can only make stricter)
+  quality:
+    files: [quality.yaml]
+    fields:
+      - coverage.minimum          # Must be >= policy floor
+      - coverage.target           # Target coverage
+      - duplication.maximum       # Must be <= policy ceiling
+      - code_smells.maximum       # Must be <= policy ceiling
+      - maintainability_rating.maximum
+      - reliability_rating.maximum
+      - security_rating.maximum
+      - custom_gates.*            # Additional quality gates
+    direction: stricter_only      # Teams can only raise the bar
+
+  # Pipeline registration
+  pipeline:
+    files: [pipeline.yaml]
+    fields:
+      - description
+      - owner.*
+      - custom_stages.*
+      - notifications.*
+    constraints:
+      security_blocks_required: true  # All security_blocks must be true
+
+# Per-deploy-target boundaries — what each deploy target allows teams to configure.
+deploy_targets:
+  ecs:
+    customizable_files:
+      - config.yaml
+      - hooks.yaml
+      - tests.yaml
+      - quality.yaml
+      - pipeline.yaml
+      - task-overrides.yaml       # ECS-specific: container config, scaling
+    team_owns:
+      - container_overrides.*     # CPU, memory, env vars per container
+      - scaling.*                 # Auto-scaling settings
+      - health_check.*            # Container health checks
+      - port_mappings.*           # Container port mappings
+    protected:
+      - task_role_arn             # IAM roles managed by platform
+      - execution_role_arn        # IAM roles managed by platform
+
+  eks:
+    customizable_files:
+      - config.yaml
+      - hooks.yaml
+      - tests.yaml
+      - quality.yaml
+      - pipeline.yaml
+    team_owns:
+      - chart/**                  # Full Helm chart ownership
+      - chart/values.yaml         # Default Helm values
+      - chart/values-*.yaml       # Per-environment Helm values
+      - chart/templates/**        # Helm templates
+    protected:
+      - chart/Chart.yaml:dependencies  # Platform charts only
+      - namespace                 # Namespace managed by platform
+
+  lambda:
+    customizable_files:
+      - config.yaml
+      - hooks.yaml
+      - tests.yaml
+      - quality.yaml
+      - pipeline.yaml
+      - function-config.yaml      # Lambda-specific config
+    team_owns:
+      - memory                    # Function memory (128-10240 MB)
+      - timeout                   # Function timeout (1-900s)
+      - triggers.*                # Event triggers
+      - environment_variables.*   # Function env vars
+      - reserved_concurrency      # Concurrency limits
+      - provisioned_concurrency.* # Per-env provisioned concurrency
+    protected:
+      - runtime                   # Runtime from platform stack detection
+      - vpc                       # VPC config managed by platform
+      - layers                    # Lambda layers managed by platform
+
+  s3-cloudfront:
+    customizable_files:
+      - config.yaml
+      - hooks.yaml
+      - tests.yaml
+      - quality.yaml
+      - pipeline.yaml
+    team_owns:
+      - build_args.*              # Build configuration
+      - env_vars.*                # Build-time env vars
+      - redirect_rules.*          # CloudFront redirect rules
+      - error_pages.*             # Custom error pages
+      - cache_behaviors.*         # Cache configuration
+    protected:
+      - distribution_id           # CloudFront distribution managed by platform
+      - bucket_name               # S3 bucket managed by platform
+      - ssl_certificate           # SSL cert managed by platform
+
+  ec2:
+    customizable_files:
+      - config.yaml
+      - hooks.yaml
+      - tests.yaml
+      - quality.yaml
+      - pipeline.yaml
+    team_owns:
+      - deploy_scripts.*          # Custom deploy scripts
+      - env_vars.*                # Environment variables
+      - build_args.*              # Build arguments
+    protected:
+      - instance_type             # Instance type from tier defaults
+      - security_groups           # Security groups managed by platform
+      - iam_role                  # IAM role managed by platform
+      - ami_id                    # AMI managed by platform
+
+  azure-functions:
+    customizable_files:
+      - config.yaml
+      - hooks.yaml
+      - tests.yaml
+      - quality.yaml
+      - pipeline.yaml
+      - function-config.yaml
+    team_owns:
+      - memory
+      - timeout
+      - triggers.*
+      - environment_variables.*
+    protected:
+      - runtime
+      - subscription_id
+      - resource_group
+
+# Policy floors — minimum quality thresholds by tier.
+# Teams can only set thresholds >= these values.
+policy_floors:
+  bronze:
+    coverage_minimum: 0           # No coverage requirement
+    duplication_maximum: 100      # No duplication limit
+  silver:
+    coverage_minimum: 60          # 60% minimum coverage
+    duplication_maximum: 10       # Max 10% duplication
+  gold:
+    coverage_minimum: 80          # 80% minimum coverage
+    duplication_maximum: 5        # Max 5% duplication
