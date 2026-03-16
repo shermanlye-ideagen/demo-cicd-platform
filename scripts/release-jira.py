@@ -78,13 +78,17 @@ def create_version(base_url: str, project_key: str, version_name: str) -> dict:
 
 
 def find_resolved_tickets(base_url: str, project_key: str, max_results: int = 20) -> list[dict]:
-    """Find recently resolved tickets without a fix version."""
+    """Find recently resolved tickets without a fix version.
+
+    Uses the new /rest/api/3/search/jql endpoint (Atlassian deprecated /rest/api/3/search).
+    See: https://developer.atlassian.com/changelog/#CHANGE-2046
+    """
     jql = (
         f"project = {project_key} AND status = Done "
         f"AND fixVersion is EMPTY ORDER BY updated DESC"
     )
-    params = urllib.parse.urlencode({"jql": jql, "maxResults": max_results, "fields": "summary,status"})
-    result = api_request(base_url, f"/search?{params}")
+    payload = {"jql": jql, "maxResults": max_results, "fields": ["summary", "status"]}
+    result = api_request(base_url, "/search/jql", method="POST", data=payload)
     return result.get("issues", [])
 
 
