@@ -50,7 +50,7 @@ def call_claude(system_prompt: str, user_prompt: str) -> str:
         sys.exit(1)
 
     body = json.dumps({
-        "model": "claude-sonnet-4-20250514",
+        "model": os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
         "max_tokens": 4096,
         "system": system_prompt,
         "messages": [{"role": "user", "content": user_prompt}],
