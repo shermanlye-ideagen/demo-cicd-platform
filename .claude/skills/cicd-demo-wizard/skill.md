@@ -69,10 +69,10 @@ After cleanup, confirm: "Clean slate. Dashboard should show {product} with no ac
 
 ## Phase 1: Product Onboarding (6-Phase Lifecycle)
 
-**Role: Product Team initiates → Platform Team executes**
+**Role: Platform Team**
 
 Tell the user:
-> "The **Product Team** submits an onboarding request (via JIRA IDEVOPS ticket) and answers key questions — they know their stack, team, and tenancy model. The **Platform Team** then runs the automation via `/cicd-onboard`."
+> "You're now the **Platform Team (Vertex)**. A product team has requested onboarding for {product}. The Platform Team owns the entire onboarding process — scanning, registration, scaffolding, infra provisioning, and readiness checks. This is run via `/cicd-onboard`."
 
 Ask using AskUserQuestion:
 **"The {product} team has submitted an onboarding request. Ready to walk through onboarding?"**
@@ -83,16 +83,16 @@ Present the 6-phase onboarding lifecycle (always show this, whether they pick "w
 
 > ### The 6-Phase Onboarding Lifecycle
 >
-> | # | Phase | Skill | Who | What Happens |
-> |---|-------|-------|-----|-------------|
-> | 1 | Migrate | `/cicd-migrate-repo` | Platform Team | Clone from Bitbucket → create GitHub repo → push (skipped if already on GitHub) |
-> | 2 | Scan | `/cicd-scan` | Platform Team | Auto-detect tech stack, CI/CD system, IaC, deploy target, services |
-> | 3 | Register | `/cicd-register` | Product Team answers, Platform Team runs | Interactive questions → generate `product.json` (4 fields: name, team, repo, tenancy) → update `products.json` |
-> | 4 | Scaffold | `/cicd-scaffold` | Platform Team | Generate thin-caller `ci.yaml` + `.cicd/` config starters → push to product repo |
-> | 5 | Infra | `/cicd-infra` | Platform Team | Provision TFC workspaces → Terraform plan/apply (or import existing) |
-> | 6 | Readiness | `/cicd-readiness-check` | Platform Team | First pipeline run → verify security/quality gates → readiness report |
+> | # | Phase | Skill | What Happens |
+> |---|-------|-------|-------------|
+> | 1 | Migrate | `/cicd-migrate-repo` | Clone from Bitbucket → create GitHub repo → push (skipped if already on GitHub) |
+> | 2 | Scan | `/cicd-scan` | Auto-detect tech stack, CI/CD system, IaC, deploy target, services |
+> | 3 | Register | `/cicd-register` | Generate `product.json` (4 fields: name, team, repo, tenancy) → update `products.json` |
+> | 4 | Scaffold | `/cicd-scaffold` | Generate thin-caller `ci.yaml` → push to product repo |
+> | 5 | Infra | `/cicd-infra` | Provision TFC workspaces → Terraform plan/apply (or import existing) |
+> | 6 | Readiness | `/cicd-readiness-check` | First pipeline run → verify security/quality gates → readiness report |
 >
-> All products get the same pipeline rigor — no tier selection needed. Product teams answer questions during registration; the Platform team (Vertex) runs the automation.
+> All products get the same pipeline rigor — no tier selection needed. The Platform Team (Vertex) owns and runs the entire onboarding process.
 
 Then walk through each phase for the demo product:
 
@@ -396,7 +396,7 @@ Tell the user:
 >
 > | Phase | Who | What |
 > |-------|-----|------|
-> | Onboard | Product Team initiates → Platform Team executes | 6-phase lifecycle: migrate → scan → register → scaffold → infra → readiness |
+> | Onboard | Platform Team | 6-phase lifecycle: migrate → scan → register → scaffold → infra → readiness |
 > | **Provision Tenants** | **Product Team** | **Created tenant registry with bronze (acme-corp) + gold (enterprise-client) tenants in their repo** |
 > | Develop | Product Team | Feature branch + PR created |
 > | AI Review | Automated (GitHub Copilot) | Security issues found + commented |
