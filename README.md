@@ -1,6 +1,6 @@
 # AI-Powered CI/CD Platform Demo
 
-Demonstrates AI-enhanced DevOps workflows using **Claude Code + GitHub Actions** for Ideagen's unified CI/CD platform.
+Demonstrates AI-enhanced DevOps workflows using **GitHub Copilot + GitHub Actions** for Ideagen's unified CI/CD platform.
 
 ## What This Demonstrates
 
@@ -8,9 +8,9 @@ Demonstrates AI-enhanced DevOps workflows using **Claude Code + GitHub Actions**
 
 | Workflow | Trigger | What AI Does |
 |----------|---------|-------------|
-| **AI Code Review** | Every PR | Claude reviews changes against platform standards, comments with findings |
+| **AI Code Review** | Every PR | GitHub Copilot reviews changes natively on PRs |
 | **AI Release** | Tag push | Claude generates categorized release notes, creates JIRA version + Confluence page |
-| **Self-Service Validation** | PR with `self-service` label | Claude validates against policies, explains decisions with quotes |
+| **Self-Service Validation** | PR with `self-service` label | Validates changes against policies, posts results |
 
 ### Claude Code Skills (Interactive)
 
@@ -23,17 +23,19 @@ Demonstrates AI-enhanced DevOps workflows using **Claude Code + GitHub Actions**
 ```
 Product Repo                        Platform Repo (this repo)
 ├── .github/workflows/ci.yaml      ├── .github/workflows/
-│   (calls platform workflows)     │   ├── _review-ai.yaml      ← Claude API
-│                                   │   ├── release.yaml          ← Claude + JIRA + Confluence
-├── .platform/                      │   └── _validate-self-service-pr.yaml
-│   ├── config.yaml                 ├── config/
-│   └── hooks.yaml                  │   ├── platform-standards.yaml
-│                                   │   ├── conventions/
-├── tenants/                        │   └── policies/
-│   └── registry.yaml               ├── scripts/
-│                                   │   ├── ai-review.py          ← Claude API caller
-└── src/                            │   ├── release-jira.py
-                                    │   └── release-confluence.py
+│   (standard pipeline)            │   ├── release.yaml          ← Claude + JIRA + Confluence
+│                                   │   └── _validate-self-service-pr.yaml
+├── .platform/                      ├── config/
+│   ├── config.yaml                 │   ├── platform-standards.yaml
+│   └── hooks.yaml                  │   ├── conventions/
+│                                   │   └── policies/
+├── tenants/                        ├── scripts/
+│   └── registry.yaml               │   ├── release-jira.py
+│                                   │   └── release-confluence.py
+└── src/                            └── products/
+                                        └── {name}/product.json
+
+AI Code Review: GitHub Copilot (native, repo settings)
 ```
 
 ## Platform Standards
@@ -49,7 +51,7 @@ Product Repo                        Platform Repo (this repo)
 
 | Secret | Purpose |
 |--------|---------|
-| `ANTHROPIC_API_KEY` | Claude API calls |
+| `ANTHROPIC_API_KEY` | Claude API (release notes) |
 | `ATLASSIAN_EMAIL` | JIRA/Confluence API |
 | `ATLASSIAN_TOKEN` | JIRA/Confluence API |
 
@@ -59,6 +61,15 @@ Product Repo                        Platform Repo (this repo)
 |----------|-------|
 | `ATLASSIAN_BASE_URL` | `https://ideagen.atlassian.net` |
 
-## Companion Repo
+### GitHub Copilot (repo settings)
 
-See [demo-product](https://github.com/shermanlye-ideagen/demo-product) for a sample product that uses this platform.
+Enable on all product repos: **Repo Settings → Code review → Copilot**
+
+## Companion Repos
+
+| Repo | Stack | Purpose |
+|------|-------|---------|
+| [devonway](https://github.com/shermanlye-ideagen/devonway) | .NET | Safety management (gold tier) |
+| [iqmc](https://github.com/shermanlye-ideagen/iqmc) | .NET | Quality management (silver tier) |
+| [lucidity](https://github.com/shermanlye-ideagen/lucidity) | PHP | Compliance & risk (bronze tier) |
+| [demo-product](https://github.com/shermanlye-ideagen/demo-product) | Python | Platform demo (silver tier) |

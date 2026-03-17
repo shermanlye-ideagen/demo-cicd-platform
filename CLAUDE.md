@@ -7,7 +7,7 @@ AI-powered CI/CD platform for Ideagen. Showcases Claude Code + GitHub Actions in
 ## Architecture
 
 - **Convention + Policy + Platform Standards** — no per-product exceptions
-- **AI Code Review** — Claude reviews every PR against platform standards
+- **AI Code Review** — GitHub Copilot reviews every PR natively
 - **AI Release** — Claude generates release notes, JIRA versions, Confluence pages
 - **Self-Service** — Product teams provision tenants + add services via Claude Code skill
 
@@ -28,16 +28,16 @@ AI-powered CI/CD platform for Ideagen. Showcases Claude Code + GitHub Actions in
 
 | Workflow | Trigger | What It Does |
 |----------|---------|-------------|
-| `_review-ai.yaml` | PR (reusable) | Claude reviews diff against platform standards |
+| *(removed)* | PR | AI review handled natively by GitHub Copilot |
 | `release.yaml` | Tag push | AI release notes + GitHub Release + JIRA version + Confluence page |
-| `_validate-self-service-pr.yaml` | PR with `self-service` label | Claude validates changes against self-service boundaries |
+| `_validate-self-service-pr.yaml` | PR with `self-service` label | Validates changes against self-service boundaries + posts results |
 | `standard-pipeline.yaml` | PR/push (reusable) | Standard CI pipeline (build, test, scan, deploy) |
 
 ## Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/ai-review.py` | Calls Claude API for code review / self-service validation |
+| *(removed)* | AI review now handled by GitHub Copilot |
 | `scripts/release-jira.py` | Creates JIRA version and links resolved tickets |
 | `scripts/release-confluence.py` | Creates Confluence release page |
 | `scripts/resolve-config.py` | Resolves product config (convention + policy) |

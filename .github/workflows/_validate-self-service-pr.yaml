@@ -45,23 +45,25 @@ jobs:
 
           cat /tmp/scope-check.txt
 
-      - name: AI Policy Explanation
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          git diff origin/main...HEAD > /tmp/self-service-diff.txt
-          python scripts/ai-review.py \
-            --diff /tmp/self-service-diff.txt \
-            --product "self-service" \
-            --standards config/platform-standards.yaml \
-            --boundaries config/conventions/self-service-boundaries.yaml \
-            --mode self-service \
-            --validation-output /tmp/validation-output.txt \
-            --scope-check /tmp/scope-check.txt
-
-      - name: Post Review Comment
+      - name: Post Validation Results
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          {
+            echo "## Self-Service Validation Results"
+            echo ""
+            echo "### Config Validation"
+            echo '```'
+            cat /tmp/validation-output.txt
+            echo '```'
+            echo ""
+            echo "### Scope Check"
+            echo '```'
+            cat /tmp/scope-check.txt
+            echo '```'
+            echo ""
+            echo "---"
+            echo "*GitHub Copilot will review the code changes separately.*"
+          } > /tmp/validation-comment.md
           gh pr comment ${{ github.event.pull_request.number }} \
-            --body-file /tmp/ai-review-output.md
+            --body-file /tmp/validation-comment.md
