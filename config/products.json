@@ -7,6 +7,27 @@
       "team": "platform-demo",
       "tier": "silver",
       "status": "active"
+    },
+    {
+      "name": "devonway",
+      "repo": "shermanlye-ideagen/devonway",
+      "team": "team-safety",
+      "tier": "gold",
+      "status": "active"
+    },
+    {
+      "name": "iqmc",
+      "repo": "shermanlye-ideagen/iqmc",
+      "team": "team-quality",
+      "tier": "silver",
+      "status": "active"
+    },
+    {
+      "name": "lucidity",
+      "repo": "shermanlye-ideagen/lucidity",
+      "team": "team-compliance",
+      "tier": "bronze",
+      "status": "active"
     }
   ]
 }

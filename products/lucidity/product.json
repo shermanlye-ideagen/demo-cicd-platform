@@ -1,0 +1,10 @@
+{
+  "$schema": "../../config/schema/product-schema.json",
+  "name": "lucidity",
+  "displayName": "Lucidity Compliance & Risk",
+  "team": "team-compliance",
+  "tier": "bronze",
+  "repo": "shermanlye-ideagen/lucidity",
+  "tenancy": "single",
+  "detectedStack": "php"
+}

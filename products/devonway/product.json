@@ -1,0 +1,10 @@
+{
+  "$schema": "../../config/schema/product-schema.json",
+  "name": "devonway",
+  "displayName": "DevonWay Safety Management",
+  "team": "team-safety",
+  "tier": "gold",
+  "repo": "shermanlye-ideagen/devonway",
+  "tenancy": "multi",
+  "detectedStack": "dotnet"
+}
