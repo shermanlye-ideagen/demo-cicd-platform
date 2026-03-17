@@ -2,9 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ideagen.com/schemas/cicd/product-schema.json",
   "title": "Product Registration",
-  "description": "Standardized product registration. 5 required fields. Platform auto-detects and resolves everything else. No product-level customization.",
+  "description": "Standardized product registration. 4 required fields. Platform auto-detects and resolves everything else. No product-level customization.",
   "type": "object",
-  "required": ["name", "team", "tier", "repo", "tenancy"],
+  "required": ["name", "team", "repo", "tenancy"],
   "additionalProperties": false,
   "properties": {
     "$schema": {
@@ -25,11 +25,6 @@
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]+$",
       "description": "Owning team identifier"
-    },
-    "tier": {
-      "type": "string",
-      "enum": ["bronze", "silver", "gold"],
-      "description": "Product governance tier — determines CI/CD policies and quality gates"
     },
     "repo": {
       "type": "string",

@@ -60,7 +60,6 @@ def build_release_page(product: str, version: str, release_notes: str) -> str:
 <tr><th>Product</th><td>{product}</td></tr>
 <tr><th>Version</th><td>{version}</td></tr>
 <tr><th>Date</th><td>{today}</td></tr>
-<tr><th>Tier</th><td>Silver</td></tr>
 <tr><th>Deploy Target</th><td>EKS</td></tr>
 </tbody>
 </table>
@@ -86,8 +85,8 @@ def build_release_page(product: str, version: str, release_notes: str) -> str:
 <ul>
 <li>SAST: Required (SonarQube)</li>
 <li>SBOM: Required</li>
-<li>Coverage Floor: 60% (Silver tier)</li>
-<li>Duplication Max: 10%</li>
+<li>Coverage Floor: 80%</li>
+<li>Duplication Max: 5%</li>
 </ul>
 
 <h2>Rollback Plan</h2>

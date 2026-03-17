@@ -41,7 +41,7 @@ AI Code Review: GitHub Copilot (native, repo settings)
 ## Platform Standards
 
 - **Non-negotiable security**: SAST + SBOM required for ALL products
-- **Tier-based governance**: Bronze (dev) → Silver (production) → Gold (enterprise)
+- **Uniform pipeline**: All products get the same CI/CD rigor — 4 environments, full scanning, load testing
 - **Self-service boundaries**: Teams can provision tenants + add services. Everything else is platform-managed.
 - **Zero exceptions**: No per-product overrides to security or compliance policies.
 
@@ -69,7 +69,7 @@ Enable on all product repos: **Repo Settings → Code review → Copilot**
 
 | Repo | Stack | Purpose |
 |------|-------|---------|
-| [devonway](https://github.com/shermanlye-ideagen/devonway) | .NET | Safety management (gold tier) |
-| [iqmc](https://github.com/shermanlye-ideagen/iqmc) | .NET | Quality management (silver tier) |
-| [lucidity](https://github.com/shermanlye-ideagen/lucidity) | PHP | Compliance & risk (bronze tier) |
-| [demo-product](https://github.com/shermanlye-ideagen/demo-product) | Python | Platform demo (silver tier) |
+| [devonway](https://github.com/shermanlye-ideagen/devonway) | .NET | Safety management |
+| [iqmc](https://github.com/shermanlye-ideagen/iqmc) | .NET | Quality management |
+| [lucidity](https://github.com/shermanlye-ideagen/lucidity) | PHP | Compliance & risk |
+| [demo-product](https://github.com/shermanlye-ideagen/demo-product) | Python | Platform demo |

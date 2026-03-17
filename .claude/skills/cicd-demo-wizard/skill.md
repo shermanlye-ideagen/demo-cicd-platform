@@ -1,8 +1,8 @@
 ---
 name: cicd-demo-wizard
-description: "Full orchestrated demo of the AI-Powered CI/CD Platform. Interactive wizard that walks through product onboarding, PR creation, AI review, merge, deployment through all environments, and release — with dashboard visibility at every step."
+description: "Full orchestrated demo of the AI-Powered CI/CD Platform. Interactive wizard that walks through product onboarding, tenant provisioning, PR creation, AI review, merge, tenant-aware deployment through all environments, and release — with dashboard visibility at every step."
 user_invocable: true
-arguments: "[product] — Optional: devonway, iqmc, or lucidity. If not specified, asks interactively."
+arguments: "[product] — Optional: devonway, iqmc, lucidity, or demo-product. If not specified, asks interactively."
 ---
 
 # CICD Demo Wizard — Full Platform Orchestration
@@ -14,16 +14,17 @@ This is a **rigid** skill. Follow every phase exactly in order. Pause and ask th
 This wizard demonstrates the entire AI-Powered CI/CD Platform lifecycle:
 
 ```
-Phase 0: Setup & Cleanup
-Phase 1: Product Onboarding (as Platform Team)
-Phase 2: Feature Development (as Product Team)
-Phase 3: AI Code Review
-Phase 4: Merge to Platform
-Phase 5: Test Environment Pipeline
-Phase 6: Perf Environment Pipeline
-Phase 7: Staging Environment Pipeline
-Phase 8: Release & Documentation
-Phase 9: Summary & Impact
+Phase 0:  Setup & Cleanup
+Phase 1:  Product Onboarding (6-phase lifecycle)
+Phase 2:  Tenant Provisioning (provision tenants at different tiers)
+Phase 3:  Feature Development (as Product Team — PR with intentional issues)
+Phase 4:  AI Code Review (GitHub Copilot — automated)
+Phase 5:  Merge to Main
+Phase 6:  Deploy to Test (canary tenant → ring rollout)
+Phase 7:  Deploy to Perftest (load/stress/spike tests)
+Phase 8:  Deploy to Staging (UAT + compliance)
+Phase 9:  Release & Documentation (AI notes + JIRA + Confluence)
+Phase 10: Summary & Impact
 ```
 
 At each phase, explain what's happening, who is acting (Platform Team vs Product Team), and tell the user to watch the dashboard.
@@ -48,8 +49,10 @@ Ask the user using AskUserQuestion:
 
 **"Welcome to the AI-Powered CI/CD Platform Demo! Let's set up."**
 
+Before asking, read `config/products.json` to get the list of registered products. Build the product choices dynamically from the registry — do NOT hardcode product names. Products are listed by name only (no tier labels).
+
 Questions to ask (all at once):
-1. Which product to demo? (DevonWay .NET Gold / IQMC .NET Silver / Lucidity PHP Bronze)
+1. Which product to demo? (List each product from `products.json` by name only — e.g. "DevonWay", "IQMC", "Lucidity", "Demo Product" — derived from the registry, not hardcoded)
 2. Clean up previous test data? (Yes full cleanup / No keep existing)
 3. Is the dashboard visible at http://localhost:5175?
 
@@ -64,38 +67,142 @@ After cleanup, confirm: "Clean slate. Dashboard should show {product} with no ac
 
 ---
 
-## Phase 1: Product Onboarding
+## Phase 1: Product Onboarding (6-Phase Lifecycle)
 
 **Role: Platform Team**
 
 Tell the user:
-> "You're now acting as the **Platform Team**. A product team has requested onboarding for {product}. Let's register it in the platform."
+> "You're now acting as the **Platform Team**. A product team has requested onboarding for {product}. In production, the platform uses a **6-phase onboarding lifecycle** (`/cicd-onboard`)."
 
 Ask using AskUserQuestion:
-**"The {product} team has submitted an onboarding request. Ready to proceed?"**
-- Yes, onboard {product}
-- Show me what onboarding does first
+**"The {product} team has submitted an onboarding request. Ready to walk through onboarding?"**
+- Yes, walk through the 6-phase onboarding
+- Show me what each phase does first
 
-If they want to see what it does, explain:
-1. Scan the repo to detect tech stack
-2. Register product in `config/products.json`
-3. Create `products/{name}/product.json`
-4. Scaffold `.platform/` config files
-5. Generate CI/CD pipeline (GitHub Actions)
+Present the 6-phase onboarding lifecycle (always show this, whether they pick "walk through" or "show me first"):
 
-Then confirm the product is already registered in demo-cicd-platform:
+> ### The 6-Phase Onboarding Lifecycle
+>
+> | # | Phase | Skill | What Happens |
+> |---|-------|-------|-------------|
+> | 1 | Migrate | `/cicd-migrate-repo` | Clone from Bitbucket → create GitHub repo → push (skipped if already on GitHub) |
+> | 2 | Scan | `/cicd-scan` | Auto-detect tech stack, CI/CD system, IaC, deploy target, services |
+> | 3 | Register | `/cicd-register` | Interactive questions → generate `product.json` (4 fields: name, team, repo, tenancy) → update `products.json` |
+> | 4 | Scaffold | `/cicd-scaffold` | Generate `ci.yaml` + `.cicd/` config starters → push to product repo |
+> | 5 | Infra | `/cicd-infra` | Provision TFC workspaces → Terraform plan/apply (or import existing) |
+> | 6 | Readiness | `/cicd-readiness-check` | First pipeline run → verify security/quality gates → readiness report |
+>
+> All products get the same pipeline rigor — no tier selection needed. The platform team (Vertex) runs all onboarding. Product teams use Day-2 self-service skills post-onboarding.
+
+Then walk through each phase for the demo product:
+
+**Phase 1.1 — Migrate:** Check if the product repo exists on GitHub:
 ```bash
-cat demo-cicd-platform/config/products.json | grep {product}
-cat demo-cicd-platform/products/{product}/product.json
+gh repo view shermanlye-ideagen/{product} --json name,url -q '.url'
 ```
+Tell user: "Repo already exists on GitHub — Phase 1 (Migrate) is skipped."
 
-Show the product.json contents and explain: "This is the 5-field standardized schema. The platform auto-detects everything else."
+**Phase 1.2 — Scan:** Show what the scan detects. Read the product's `product.json` to show detected stack info:
+```bash
+cat products/{product}/product.json
+```
+Explain what the scanner detects: tech stack, deploy target, runtime version, services, etc.
 
-Tell user: "Check the dashboard — {product} should appear as a row with 'No active changes'."
+**Phase 1.3 — Register:** Show the product is registered in the platform:
+```bash
+# Show registry entry
+python -c "import json; data=json.load(open('config/products.json')); entry=[p for p in data['products'] if p['name']=='{product}'][0]; print(json.dumps(entry, indent=2))"
+```
+Explain: "This is the standardized registration — 4 required fields. The platform auto-detects everything else via conventions + policies."
+
+**Phase 1.4 — Scaffold:** Show the CI/CD workflow that was scaffolded in the product repo:
+```bash
+gh api repos/shermanlye-ideagen/{product}/contents/.github/workflows -q '.[].name'
+```
+Explain: "The scaffold phase generates thin-caller workflows that reference the platform's reusable workflows. Product repos never contain pipeline logic — only the call."
+
+**Phase 1.5 — Infra:** Explain that in production, this provisions TFC workspaces and runs Terraform plan/apply per environment (test, perftest, staging, prod). For the demo, infrastructure is pre-provisioned.
+
+**Phase 1.6 — Readiness:** Explain that the readiness check verifies: security gates pass (SAST, SBOM), quality gates pass (80% coverage, 5% max duplication), environments are provisioned, and the pipeline-registry entry is valid.
+
+Tell user: "All 6 phases complete. {product} is fully onboarded. Check the dashboard — it should appear as a row with 'No active changes'."
 
 ---
 
-## Phase 2: Feature Development
+## Phase 2: Tenant Provisioning
+
+**Role: Platform Team**
+
+Tell the user:
+> "Now we provision tenants for {product}. In a multi-tenant product, each customer is a **tenant** with its own infrastructure tier. Tenant tier (bronze/silver/gold) controls infrastructure sizing — compute, database mode, encryption, monitoring — NOT pipeline behavior. All products get the same CI/CD pipeline regardless of their tenants' tiers."
+
+Ask using AskUserQuestion:
+**"Ready to provision two tenants for {product}?"**
+- Yes, provision both tenants
+- Explain tenant tiers first
+
+If they want an explanation first:
+> ### Tenant Tiers (Infrastructure Sizing)
+>
+> | Tier | Database | Compute | Encryption | Monitoring | Backup |
+> |------|----------|---------|------------|------------|--------|
+> | Bronze | Shared RDS | t4g.small | AWS-managed | Email alerts | 7-day |
+> | Silver | Dedicated RDS (t4g.medium) | t4g.medium | AWS-managed | CloudWatch | 14-day |
+> | Gold | Dedicated RDS (r6g.large, multi-AZ) | m6g.large | CMK (customer-managed) | PagerDuty + NR | 30-day |
+>
+> These tiers control infrastructure only. The CI/CD pipeline is identical for all products and all tenants.
+
+Create `tenants/registry.yaml` in the product repo with two tenants:
+
+```yaml
+apiVersion: v1
+kind: TenantRegistry
+product: {PRODUCT_NAME}
+
+tenants:
+  - name: acme-corp
+    tier: bronze
+    region: us-east-1
+    status: active
+    created_at: "{TODAY_DATE}"
+
+  - name: enterprise-client
+    tier: gold
+    region: us-east-1
+    status: active
+    created_at: "{TODAY_DATE}"
+    compliance:
+      data_residency: us
+      cmk_encryption: true
+      backup_retention_days: 30
+```
+
+Steps:
+```bash
+cd {product_repo_path}
+git checkout main && git pull
+# Create tenants/registry.yaml with the content above
+mkdir -p tenants
+# Write the file
+git add tenants/registry.yaml
+git commit -m "feat: provision tenants acme-corp (bronze) and enterprise-client (gold)"
+git push origin main
+```
+
+After push, explain:
+> "Pushing `tenants/registry.yaml` triggers the **Tenant Provisioning Workflow**. For each tenant, Crossplane creates a `TenantInfra` custom resource that provisions:
+> - A dedicated Kubernetes namespace (`{product}-{tenant}`)
+> - RBAC rules scoped to the tenant namespace
+> - NetworkPolicy isolating tenant traffic
+> - Tier-appropriate infrastructure: `acme-corp` gets shared DB + basic monitoring (bronze), `enterprise-client` gets dedicated multi-AZ RDS + CMK encryption + PagerDuty (gold)
+>
+> The tenant registry is NOT per-environment — the same `tenants/registry.yaml` defines all tenants. The provisioning workflow creates tenant infrastructure in the target environment based on the git event."
+
+Tell user: "Check the dashboard — two tenants should appear under {product}."
+
+---
+
+## Phase 3: Feature Development
 
 **Role: Product Team**
 
@@ -132,36 +239,25 @@ Steps (execute with 3-second delays between each):
    gh pr create --title "feat: {feature_description}" --body "## Summary\n- {description}\n\n## Test plan\n- [ ] Verify endpoints work"
    ```
 
-Tell user: "PR created! Watch the dashboard — a new row should appear under {product} with ✅ PR Open. The AI Review and Tests columns should start showing ⏳."
+Tell user: "PR created! Watch the dashboard — a new row should appear under {product} with PR Open. The AI Review and Tests columns should start showing activity."
 
 ---
 
-## Phase 3: AI Code Review
+## Phase 4: AI Code Review
 
-**Role: Automated (Claude AI)**
+**Role: Automated (GitHub Copilot)**
 
 Tell the user:
-> "The AI Code Review is now running automatically. Claude is reviewing the PR against platform standards."
+> "The AI Code Review is now running automatically. GitHub Copilot reviews every PR natively against platform standards."
 
-Wait for the workflow to complete:
+Wait for the review to appear:
 ```bash
-# Get latest run ID and watch it
-RUN_ID=$(gh run list --repo {repo} --limit 1 --json databaseId -q '.[0].databaseId')
-gh run watch $RUN_ID --repo {repo} --exit-status
-```
-
-Once complete, show the results:
-```bash
-gh run view $RUN_ID --repo {repo} | grep -E "^[✓X]"
-```
-
-Then fetch and display the AI review comment:
-```bash
-gh api repos/{repo}/issues/{pr_number}/comments | python -c "import sys,json; comments=json.load(sys.stdin); [print(c['body'][:500]) for c in comments if 'AI Code Review' in c.get('body','')]"
+# Check for Copilot review comments
+gh api repos/{repo}/pulls/{pr_number}/reviews -q '.[].body' | head -20
 ```
 
 Tell user:
-> "Claude found security issues! Check the PR on GitHub to see the full review. Dashboard should now show ✅ AI Review (or ❌ if it found critical issues)."
+> "GitHub Copilot found security issues! Check the PR on GitHub to see the full review. Dashboard should now show AI Review activity."
 
 Ask: **"Ready to proceed to merge? In a real workflow, the team would fix the issues first."**
 - Yes, merge anyway (for demo purposes)
@@ -169,27 +265,33 @@ Ask: **"Ready to proceed to merge? In a real workflow, the team would fix the is
 
 ---
 
-## Phase 4: Merge to Platform
+## Phase 5: Merge to Main
 
 **Role: Product Team → Platform**
 
 Tell the user:
-> "Merging the PR to main. This triggers the Standard Pipeline which deploys to the Test environment."
+> "Merging the PR to main. This triggers the Standard Pipeline which builds, tests, scans, and deploys through environments."
 
 ```bash
 gh pr merge {pr_number} --repo {repo} --merge --delete-branch
 ```
 
-Tell user: "PR merged! Watch the dashboard — the 'Merged to Platform' column should flip to ✅."
+Tell user: "PR merged! Watch the dashboard — the pipeline will begin deploying through environments."
 
 ---
 
-## Phase 5: Test Environment Pipeline
+## Phase 6: Deploy to Test (Canary → Ring Rollout)
 
 **Role: Automated (Platform)**
 
 Tell the user:
-> "The Standard Pipeline is now running on main. This includes: Build → Tests → SAST (SonarQube) → SBOM (Veracode) → E2E (Playwright) → Contract (Pact) → Security Verification → Container Push → Deploy to Test → New Relic Baseline."
+> "The Standard Pipeline is now deploying to the **Test** environment. For multi-tenant products, deployment uses **canary/ring-based rollout**:
+>
+> 1. **Canary phase:** The canary tenant (`acme-corp`) receives the new version first
+> 2. **Health check:** Platform verifies health endpoints, error rates, and latency for the canary tenant
+> 3. **Ring rollout:** Once canary passes, remaining tenants (`enterprise-client`) receive the new version
+>
+> This ensures that issues are caught with a smaller-blast-radius tenant before rolling out to enterprise customers."
 
 Wait for Standard Pipeline:
 ```bash
@@ -203,16 +305,18 @@ Show results:
 gh run view $RUN_ID --repo {repo} | grep -E "^[✓X]|  [✓X]"
 ```
 
-Tell user: "Standard Pipeline complete! All jobs passed. Dashboard 'Test' column should show ✅."
+Tell user: "Standard Pipeline complete! All jobs passed. Both tenants in the Test environment have the new version. Dashboard 'Test' column should show success."
 
 ---
 
-## Phase 6: Perf Environment Pipeline
+## Phase 7: Deploy to Perftest
 
 **Role: Automated (Platform)**
 
 Tell the user:
-> "The Perf Pipeline auto-triggered after Standard Pipeline passed. Running: K6 Baseline Load → Stress Test → Spike Test → Long-Duration → Resource Profiling → Network Simulation → E2E Under Load → New Relic Report."
+> "The Perftest Pipeline auto-triggered after Test passed. Running: K6 Baseline Load → Stress Test → Spike Test → Long-Duration → Resource Profiling → Network Simulation → E2E Under Load → New Relic Report.
+>
+> Performance tests run against **all tenants** in the perftest environment. This validates that both bronze-tier (shared DB) and gold-tier (dedicated DB) infrastructure handles load correctly."
 
 Wait for Perf Pipeline:
 ```bash
@@ -221,16 +325,18 @@ RUN_ID=$(gh run list --repo {repo} --workflow "perf-pipeline.yaml" --limit 1 --j
 gh run watch $RUN_ID --repo {repo} --exit-status
 ```
 
-Tell user: "Perf Pipeline complete! All K6 performance tests passed. Dashboard 'Perf' column should show ✅."
+Tell user: "Perf Pipeline complete! All K6 performance tests passed across all tenants. Dashboard 'Perftest' column should show success."
 
 ---
 
-## Phase 7: Staging Environment Pipeline
+## Phase 8: Deploy to Staging
 
 **Role: Automated (Platform) + Manual UAT Gate**
 
 Tell the user:
-> "The Staging Pipeline auto-triggered after Perf Pipeline passed. Running: Deploy to Staging → Integration Tests → E2E Business Validation → UAT → Security & Compliance (Veracode) → Observability Validation."
+> "The Staging Pipeline auto-triggered after Perftest passed. Running: Deploy to Staging → Integration Tests → E2E Business Validation → UAT → Security & Compliance (Veracode) → Observability Validation.
+>
+> Staging uses the same **canary → ring rollout** as Test — `acme-corp` gets the new version first, then `enterprise-client` after health checks pass."
 
 Wait for Staging Pipeline:
 ```bash
@@ -239,11 +345,11 @@ RUN_ID=$(gh run list --repo {repo} --workflow "staging-pipeline.yaml" --limit 1 
 gh run watch $RUN_ID --repo {repo} --exit-status
 ```
 
-Tell user: "Staging Pipeline complete! Dashboard 'Staging' column should show ✅. The full pipeline — from PR to Staging — is now green."
+Tell user: "Staging Pipeline complete! Dashboard 'Staging' column should show success. The full pipeline — from PR to Staging — is now green."
 
 ---
 
-## Phase 8: Release & Documentation
+## Phase 9: Release & Documentation
 
 **Role: Platform Team**
 
@@ -273,14 +379,14 @@ echo "=== GitHub Release ==="
 gh release view v1.0.0 --repo {repo}
 
 echo "=== JIRA + Confluence ==="
-gh run view $RUN_ID --repo {repo} --log | grep -E "(Created JIRA|Confluence page|✅|URL:)"
+gh run view $RUN_ID --repo {repo} --log | grep -E "(Created JIRA|Confluence page|URL:)"
 ```
 
 Tell user: "Release complete! 4 artifacts created automatically: GitHub Release with AI notes, JIRA version, Confluence release page."
 
 ---
 
-## Phase 9: Summary & Impact
+## Phase 10: Summary & Impact
 
 Tell the user:
 
@@ -288,26 +394,29 @@ Tell the user:
 >
 > Here's what just happened — the full lifecycle of a change:
 >
-> | Phase | Who | What | Time |
-> |-------|-----|------|------|
-> | Onboard | Platform Team | Product registered in platform | Already done |
-> | Develop | Product Team | Feature branch + PR created | 30 seconds |
-> | AI Review | Claude (automated) | Security issues found + commented | ~20 seconds |
-> | Merge | Product Team | PR merged to main | Instant |
-> | Test Env | Platform (automated) | 11 jobs: build, test, SAST, SBOM, E2E, deploy | ~1 minute |
-> | Perf Env | Platform (automated) | 10 jobs: K6 load/stress/spike, NR report | ~1 minute |
-> | Staging | Platform (automated) | 6 jobs: integration, UAT, compliance | ~1 minute |
-> | Release | Platform Team | AI notes + GitHub + JIRA + Confluence | ~30 seconds |
+> | Phase | Who | What |
+> |-------|-----|------|
+> | Onboard | Platform Team | 6-phase lifecycle: migrate → scan → register → scaffold → infra → readiness |
+> | **Provision Tenants** | **Platform Team** | **Created tenant registry with bronze (acme-corp) + gold (enterprise-client) tenants** |
+> | Develop | Product Team | Feature branch + PR created |
+> | AI Review | GitHub Copilot (automated) | Security issues found + commented |
+> | Merge | Product Team | PR merged to main |
+> | Test → Staging | Platform (automated) | Canary/ring deployment through all environments — canary tenant first, then ring rollout |
+> | Release | Platform Team | AI notes + GitHub + JIRA + Confluence |
 >
-> **Total: PR to Staging in under 5 minutes. Fully automated. Zero manual steps except the initial PR.**
->
-> This runs the same way for all 70+ Ideagen products:
-> - DevonWay (.NET, Gold tier) — same pipeline
-> - IQMC (.NET, Silver tier) — same pipeline
-> - Lucidity (PHP, Bronze tier) — same pipeline
+> **Key takeaways:**
+> - **No product tiers** — all products get the same CI/CD pipeline rigor (4 environments, full scanning, load testing)
+> - **Tenant tiers** control infrastructure sizing only (bronze = shared DB, gold = dedicated multi-AZ + CMK)
+> - **Canary/ring deployment** ensures safe rollout across tenants
+> - **Total: PR to Staging in under 5 minutes. Fully automated. Zero manual steps except the initial PR.**
+
+Read `config/products.json` and list all registered products dynamically (no tier labels):
+
+> This runs the same way for all Ideagen products:
+> {list each product by name from products.json}
 >
 > The dashboard shows the real-time status of every product across every environment.
 
 Ask: **"Would you like to demo another product, or are we done?"**
-- Demo another product (restart from Phase 1)
+- Demo another product (restart from Phase 0)
 - Done — wrap up

@@ -18,7 +18,7 @@ Self-service allows ONLY two operations:
 | **Provision tenant** | Add a new tenant to an existing product |
 | **Add new service** | Register a new microservice/component and scaffold its pipeline |
 
-**NOT allowed (platform team only):** tier changes, environment changes, deploy target changes, infrastructure modifications, security policy overrides, account/region changes.
+**NOT allowed (platform team only):** environment changes, deploy target changes, infrastructure modifications, security policy overrides, account/region changes.
 
 ## Step 1: Parse Request
 
@@ -132,7 +132,6 @@ jobs:
   "name": "{SERVICE_NAME}",
   "displayName": "{DISPLAY_NAME}",
   "team": "{PARENT_PRODUCT_TEAM}",
-  "tier": "{PARENT_PRODUCT_TIER}",
   "repo": "shermanlye-ideagen/{SERVICE_NAME}",
   "tenancy": "single",
   "detectedStack": "{DETECTED_STACK}"
@@ -146,7 +145,7 @@ jobs:
 7. **Create PR** with `self-service` label:
    - Branch: `self-service/add-{SERVICE_NAME}`
    - Title: `feat: register new service {SERVICE_NAME}`
-   - Body: What was registered, inherited tier/governance rules, platform standards enforced
+   - Body: What was registered, inherited governance rules, platform standards enforced
 
 8. **Summary** — Output created files and next steps.
 
@@ -159,20 +158,20 @@ Read `config/conventions/self-service-boundaries.yaml` and present:
 
 As a product team, you can:
 
-### ✅ Allowed
+### Allowed
 1. **Provision tenants** — Add new tenants with tier-appropriate infrastructure
-   - Choose tier (bronze/silver/gold), region, and compliance requirements
+   - Choose tenant tier (bronze/silver/gold), region, and compliance requirements
+   - Tenant tier controls infrastructure sizing only (not CI/CD behavior)
    - Crossplane auto-provisions: namespace, RDS, S3, IAM, KMS, monitoring
 
 2. **Add new services** — Register new microservices and scaffold pipelines
-   - Inherits parent product's tier and governance rules
+   - Inherits governance rules (all products get the same pipeline rigor)
    - Auto-scaffolds: .platform/ config, CI/CD pipeline, security scanning
 
-### ❌ Platform Team Only
+### Platform Team Only
 - Security policies (SAST, SBOM, FedRAMP)
 - Account/environment mappings
 - Approval gates
-- Tier assignments
 - Deploy targets
 - Infrastructure modifications
 

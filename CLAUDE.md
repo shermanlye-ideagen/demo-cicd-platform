@@ -22,7 +22,7 @@ AI-powered CI/CD platform for Ideagen. Showcases Claude Code + GitHub Actions in
 - `config/platform-standards.yaml` — Non-negotiable governance (SAST, SBOM, coverage floors, approval gates)
 - `config/conventions/self-service-boundaries.yaml` — What teams can customize vs what's platform-protected
 - `config/products.json` — Product registry
-- `products/{name}/product.json` — Per-product registration (5-field schema)
+- `products/{name}/product.json` — Per-product registration (4-field schema)
 
 ## GitHub Actions Workflows
 

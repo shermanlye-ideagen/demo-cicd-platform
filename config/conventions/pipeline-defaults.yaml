@@ -1,0 +1,21 @@
+# Pipeline defaults — applies to ALL products equally
+# Product-level tier has been removed. All products get full pipeline rigor.
+# Tenant-level tier (bronze/silver/gold) remains for infrastructure sizing.
+
+environments: [test, perftest, staging, prod]
+deploy_target: eks
+features: [sonarqube, newrelic, veracode-sbom, ai-code-review, load-testing]
+max_replicas: 20
+requires_cab: true
+pipeline:
+  sonarqube: true
+  newrelic: true
+  veracode_sbom: true
+  ai_code_review: true
+  e2e:
+    enabled: true
+    framework: playwright
+  load_test:
+    enabled: true
+    framework: k6
+  fedramp: false

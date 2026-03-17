@@ -3,7 +3,6 @@
   "name": "iqmc",
   "displayName": "IQMC Quality Management",
   "team": "team-quality",
-  "tier": "silver",
   "repo": "shermanlye-ideagen/iqmc",
   "tenancy": "multi",
   "detectedStack": "dotnet"

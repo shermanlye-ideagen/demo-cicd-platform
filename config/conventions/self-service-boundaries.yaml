@@ -7,8 +7,8 @@
 protected:
   # Security policies — always enforced
   security:
-    - pipeline.sonarqube          # SAST scanning (tier-dependent)
-    - pipeline.veracode_sbom      # SBOM generation (tier-dependent)
+    - pipeline.sonarqube          # SAST scanning (all products)
+    - pipeline.veracode_sbom      # SBOM generation (all products)
     - pipeline.fedramp            # FedRAMP compliance
     - security_blocks.sast        # Must be true in pipeline registration
     - security_blocks.sbom        # Must be true in pipeline registration
@@ -26,9 +26,9 @@ protected:
     - environments.*.approval
     - pipeline.requires_cab
 
-  # Tier-determined defaults that cannot be relaxed
-  tier:
-    - environments                # Which environments exist (from tier-defaults)
+  # Platform-determined defaults that cannot be relaxed
+  pipeline:
+    - environments                # Which environments exist (from pipeline-defaults)
     - deployTarget                # Deploy target (from routing convention)
     - containerized               # Container vs non-container (from routing)
 
@@ -175,7 +175,7 @@ deploy_targets:
       - env_vars.*                # Environment variables
       - build_args.*              # Build arguments
     protected:
-      - instance_type             # Instance type from tier defaults
+      - instance_type             # Instance type from pipeline defaults
       - security_groups           # Security groups managed by platform
       - iam_role                  # IAM role managed by platform
       - ami_id                    # AMI managed by platform
@@ -198,15 +198,8 @@ deploy_targets:
       - subscription_id
       - resource_group
 
-# Policy floors — minimum quality thresholds by tier.
+# Policy floors — minimum quality thresholds (uniform for all products).
 # Teams can only set thresholds >= these values.
 policy_floors:
-  bronze:
-    coverage_minimum: 0           # No coverage requirement
-    duplication_maximum: 100      # No duplication limit
-  silver:
-    coverage_minimum: 60          # 60% minimum coverage
-    duplication_maximum: 10       # Max 10% duplication
-  gold:
-    coverage_minimum: 80          # 80% minimum coverage
-    duplication_maximum: 5        # Max 5% duplication
+  coverage_minimum: 80            # 80% minimum coverage
+  duplication_maximum: 5          # Max 5% duplication

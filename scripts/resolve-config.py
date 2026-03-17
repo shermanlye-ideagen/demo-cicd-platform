@@ -2,7 +2,7 @@
 """Standardized Pipeline Platform — Config Resolver.
 
 Resolves a product's full configuration by composing:
-  Convention (stack detection + tier defaults) →
+  Convention (stack detection + pipeline defaults) →
   Policy (org rules that generate config) →
   Accounts (AWS environment mapping) →
   Provenance (trace every field to its origin)
@@ -130,14 +130,16 @@ def resolve_stack(product: dict, repo_path: Path | None = None) -> tuple[str, st
     }
 
 
-def resolve_tier_defaults(tier: str) -> dict:
-    """Load tier defaults from conventions."""
-    tier_config = load_yaml(PROJECT_ROOT / "config" / "conventions" / "tier-defaults.yaml")
-    return tier_config.get(tier, {})
+def resolve_pipeline_defaults() -> dict:
+    """Load pipeline defaults from conventions.
+
+    All products get the same pipeline config — no tier differentiation.
+    """
+    return load_yaml(PROJECT_ROOT / "config" / "conventions" / "pipeline-defaults.yaml")
 
 
-def resolve_deploy_routing(stack: str, variant: str | None, tier: str) -> dict:
-    """Determine deploy target and runtime info from stack + variant + tier.
+def resolve_deploy_routing(stack: str, variant: str | None) -> dict:
+    """Determine deploy target and runtime info from stack + variant.
 
     Uses hierarchical lookup: stack defaults → variant overrides.
     """
@@ -154,7 +156,7 @@ def resolve_deploy_routing(stack: str, variant: str | None, tier: str) -> dict:
         variant_overrides = route.get("variants", {}).get(variant, {})
         result.update(variant_overrides)
 
-    # All tiers use the same deploy target (standardized — no tier-based overrides)
+    # All products use the same deploy target (standardized)
     result["deploy_target"] = result.get("default_deploy_target", "eks")
 
     return result
@@ -254,7 +256,7 @@ def _flatten_generates(generates: dict, prefix: str = "") -> list[tuple[str, Any
 # ---------------------------------------------------------------------------
 
 def resolve_environments(
-    tier_defaults: dict,
+    pipeline_defaults: dict,
     accounts: dict,
     trait_envs: dict,
     approval_rules: dict,
@@ -267,7 +269,7 @@ def resolve_environments(
 
     Returns (environments_dict, provenance_entries).
     """
-    env_names = tier_defaults.get("environments", [])
+    env_names = pipeline_defaults.get("environments", [])
     environments = {}
     provenance = {}
 
@@ -289,8 +291,8 @@ def resolve_environments(
                 "approval": approval,
             }
             provenance[f"environments.{env_name}"] = {
-                "source": "convention:tier-defaults + accounts:azure-subscriptions",
-                "reason": "Standard environment from tier defaults (Azure)"
+                "source": "convention:pipeline-defaults + accounts:azure-subscriptions",
+                "reason": "Standard environment from pipeline defaults (Azure)"
             }
     else:
         # AWS (default)
@@ -310,8 +312,8 @@ def resolve_environments(
                 "approval": approval,
             }
             provenance[f"environments.{env_name}"] = {
-                "source": "convention:tier-defaults + accounts:aws-accounts",
-                "reason": "Standard environment from tier defaults"
+                "source": "convention:pipeline-defaults + accounts:aws-accounts",
+                "reason": "Standard environment from pipeline defaults"
             }
 
     # Add trait-generated environments
@@ -347,7 +349,7 @@ def resolve_environments(
 
 def build_pipeline_order(env_names: list[str], trait_inserts: dict | None = None) -> list:
     """Build pipeline order from environment names with trait insertions."""
-    # Default order follows the tier-defaults environment list
+    # Default order follows the pipeline-defaults environment list
     order = list(env_names)
 
     if trait_inserts:
@@ -374,7 +376,6 @@ def _resolve_single_product(product_path: Path, product: dict) -> dict:
     No traits, no exceptions, no product-level overrides.
     """
     name = product["name"]
-    tier = product["tier"]
     team = product["team"]
     provenance: dict[str, dict] = {}
 
@@ -387,31 +388,30 @@ def _resolve_single_product(product_path: Path, product: dict) -> dict:
             "reason": f"Variant '{variant}' from stack detection"
         }
 
-    # --- Step 2: Convention — Tier Defaults + Deploy Routing ---
-    tier_defaults = resolve_tier_defaults(tier)
-    routing = resolve_deploy_routing(stack, variant, tier)
+    # --- Step 2: Convention — Pipeline Defaults + Deploy Routing ---
+    pipeline_defaults = resolve_pipeline_defaults()
+    routing = resolve_deploy_routing(stack, variant)
     deploy_target = routing.get("deploy_target", "eks")
     cloud = routing.get("cloud", "aws")
     os_resolved = routing.get("os", os_name)
 
     provenance["deployTarget"] = {
         "source": "convention:deploy-routing",
-        "reason": f"stack={stack}, variant={variant}, tier={tier}"
+        "reason": f"stack={stack}, variant={variant}"
     }
 
-    # Build pipeline config from tier defaults
-    pipeline = copy.deepcopy(tier_defaults.get("pipeline", {}))
+    # Build pipeline config from pipeline defaults (uniform for all products)
+    pipeline = copy.deepcopy(pipeline_defaults.get("pipeline", {}))
     for key in pipeline:
         prov_key = f"pipeline.{key}"
         if prov_key not in provenance:
             provenance[prov_key] = {
-                "source": f"convention:tier-defaults[{tier}]",
-                "reason": f"{tier} tier default"
+                "source": "convention:pipeline-defaults",
+                "reason": "Uniform pipeline default for all products"
             }
 
     # --- Step 3: Policy Evaluation (no exceptions) ---
     product_meta = {
-        "tier": tier,
         "stack": stack,
         "variant": variant,
         "deploy_target": deploy_target,
@@ -437,13 +437,13 @@ def _resolve_single_product(product_path: Path, product: dict) -> dict:
             approval_rules.update(generates["_approval_rules"])
 
     environments, env_prov = resolve_environments(
-        tier_defaults, {}, {}, approval_rules, deploy_target, cloud
+        pipeline_defaults, {}, {}, approval_rules, deploy_target, cloud
     )
     provenance.update(env_prov)
 
     # --- Step 5: Build Pipeline Order ---
     pipeline_order = build_pipeline_order(
-        tier_defaults.get("environments", []),
+        pipeline_defaults.get("environments", []),
         None
     )
 
@@ -453,7 +453,6 @@ def _resolve_single_product(product_path: Path, product: dict) -> dict:
             "name": name,
             "displayName": product.get("displayName", name),
             "team": team,
-            "tier": tier,
             "tenancy": product.get("tenancy", "single"),
         },
         "stack": stack,
@@ -476,11 +475,11 @@ def _resolve_single_product(product_path: Path, product: dict) -> dict:
         if not key.startswith("_"):
             resolved[key] = value
 
-    # Add pipeline.requires_cab from tier
-    resolved["pipeline"]["requires_cab"] = tier_defaults.get("requires_cab", False)
+    # Add pipeline.requires_cab from pipeline defaults
+    resolved["pipeline"]["requires_cab"] = pipeline_defaults.get("requires_cab", True)
     provenance["pipeline.requires_cab"] = {
-        "source": f"convention:tier-defaults[{tier}]",
-        "reason": f"{tier} tier default"
+        "source": "convention:pipeline-defaults",
+        "reason": "Uniform pipeline default for all products"
     }
 
     return resolved
