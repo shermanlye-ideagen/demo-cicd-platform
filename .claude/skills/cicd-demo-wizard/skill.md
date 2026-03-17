@@ -69,10 +69,10 @@ After cleanup, confirm: "Clean slate. Dashboard should show {product} with no ac
 
 ## Phase 1: Product Onboarding (6-Phase Lifecycle)
 
-**Role: Platform Team**
+**Role: Product Team initiates → Platform Team executes**
 
 Tell the user:
-> "You're now acting as the **Platform Team**. A product team has requested onboarding for {product}. In production, the platform uses a **6-phase onboarding lifecycle** (`/cicd-onboard`)."
+> "The **Product Team** submits an onboarding request (via JIRA IDEVOPS ticket) and answers key questions — they know their stack, team, and tenancy model. The **Platform Team** then runs the automation via `/cicd-onboard`."
 
 Ask using AskUserQuestion:
 **"The {product} team has submitted an onboarding request. Ready to walk through onboarding?"**
@@ -83,16 +83,16 @@ Present the 6-phase onboarding lifecycle (always show this, whether they pick "w
 
 > ### The 6-Phase Onboarding Lifecycle
 >
-> | # | Phase | Skill | What Happens |
-> |---|-------|-------|-------------|
-> | 1 | Migrate | `/cicd-migrate-repo` | Clone from Bitbucket → create GitHub repo → push (skipped if already on GitHub) |
-> | 2 | Scan | `/cicd-scan` | Auto-detect tech stack, CI/CD system, IaC, deploy target, services |
-> | 3 | Register | `/cicd-register` | Interactive questions → generate `product.json` (4 fields: name, team, repo, tenancy) → update `products.json` |
-> | 4 | Scaffold | `/cicd-scaffold` | Generate `ci.yaml` + `.cicd/` config starters → push to product repo |
-> | 5 | Infra | `/cicd-infra` | Provision TFC workspaces → Terraform plan/apply (or import existing) |
-> | 6 | Readiness | `/cicd-readiness-check` | First pipeline run → verify security/quality gates → readiness report |
+> | # | Phase | Skill | Who | What Happens |
+> |---|-------|-------|-----|-------------|
+> | 1 | Migrate | `/cicd-migrate-repo` | Platform Team | Clone from Bitbucket → create GitHub repo → push (skipped if already on GitHub) |
+> | 2 | Scan | `/cicd-scan` | Platform Team | Auto-detect tech stack, CI/CD system, IaC, deploy target, services |
+> | 3 | Register | `/cicd-register` | Product Team answers, Platform Team runs | Interactive questions → generate `product.json` (4 fields: name, team, repo, tenancy) → update `products.json` |
+> | 4 | Scaffold | `/cicd-scaffold` | Platform Team | Generate thin-caller `ci.yaml` + `.cicd/` config starters → push to product repo |
+> | 5 | Infra | `/cicd-infra` | Platform Team | Provision TFC workspaces → Terraform plan/apply (or import existing) |
+> | 6 | Readiness | `/cicd-readiness-check` | Platform Team | First pipeline run → verify security/quality gates → readiness report |
 >
-> All products get the same pipeline rigor — no tier selection needed. The platform team (Vertex) runs all onboarding. Product teams use Day-2 self-service skills post-onboarding.
+> All products get the same pipeline rigor — no tier selection needed. Product teams answer questions during registration; the Platform team (Vertex) runs the automation.
 
 Then walk through each phase for the demo product:
 
@@ -131,10 +131,10 @@ Tell user: "All 6 phases complete. {product} is fully onboarded. Check the dashb
 
 ## Phase 2: Tenant Provisioning
 
-**Role: Platform Team**
+**Role: Product Team**
 
 Tell the user:
-> "Now we provision tenants for {product}. In a multi-tenant product, each customer is a **tenant** with its own infrastructure tier. Tenant tier (bronze/silver/gold) controls infrastructure sizing — compute, database mode, encryption, monitoring — NOT pipeline behavior. All products get the same CI/CD pipeline regardless of their tenants' tiers."
+> "You're now acting as the **Product Team**. You know your customers and their infrastructure needs. Each customer is a **tenant** with its own infrastructure tier. Tenant tier (bronze/silver/gold) controls infrastructure sizing — compute, database mode, encryption, monitoring — NOT pipeline behavior. The Product Team owns the tenant registry in their repo."
 
 Ask using AskUserQuestion:
 **"Ready to provision two tenants for {product}?"**
@@ -267,7 +267,7 @@ Ask: **"Ready to proceed to merge? In a real workflow, the team would fix the is
 
 ## Phase 5: Merge to Main
 
-**Role: Product Team → Platform**
+**Role: Product Team**
 
 Tell the user:
 > "Merging the PR to main. This triggers the Standard Pipeline which builds, tests, scans, and deploys through environments."
@@ -351,10 +351,10 @@ Tell user: "Staging Pipeline complete! Dashboard 'Staging' column should show su
 
 ## Phase 9: Release & Documentation
 
-**Role: Platform Team**
+**Role: Product Team decides → Platform automation executes**
 
 Tell the user:
-> "Now let's create a release. This triggers: AI-generated release notes → GitHub Release → JIRA version → Confluence release page."
+> "You're the **Product Team** — you decide when to release. Tagging a version triggers the platform automation: AI-generated release notes → GitHub Release → JIRA version → Confluence release page."
 
 Ask: **"Ready to create release v1.0.0 for {product}?"**
 
@@ -396,13 +396,13 @@ Tell the user:
 >
 > | Phase | Who | What |
 > |-------|-----|------|
-> | Onboard | Platform Team | 6-phase lifecycle: migrate → scan → register → scaffold → infra → readiness |
-> | **Provision Tenants** | **Platform Team** | **Created tenant registry with bronze (acme-corp) + gold (enterprise-client) tenants** |
+> | Onboard | Product Team initiates → Platform Team executes | 6-phase lifecycle: migrate → scan → register → scaffold → infra → readiness |
+> | **Provision Tenants** | **Product Team** | **Created tenant registry with bronze (acme-corp) + gold (enterprise-client) tenants in their repo** |
 > | Develop | Product Team | Feature branch + PR created |
-> | AI Review | GitHub Copilot (automated) | Security issues found + commented |
+> | AI Review | Automated (GitHub Copilot) | Security issues found + commented |
 > | Merge | Product Team | PR merged to main |
-> | Test → Staging | Platform (automated) | Canary/ring deployment through all environments — canary tenant first, then ring rollout |
-> | Release | Platform Team | AI notes + GitHub + JIRA + Confluence |
+> | Test → Staging | Automated (Platform pipelines) | Canary/ring deployment through all environments — canary tenant first, then ring rollout |
+> | Release | Product Team decides → Platform automation executes | AI notes + GitHub + JIRA + Confluence |
 >
 > **Key takeaways:**
 > - **No product tiers** — all products get the same CI/CD pipeline rigor (4 environments, full scanning, load testing)
