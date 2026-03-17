@@ -2,7 +2,7 @@
 
 ## Overview
 
-AI-powered CI/CD platform demo for Ideagen leadership. Showcases Claude Code + GitHub Actions integration for 70+ products.
+AI-powered CI/CD platform for Ideagen. Showcases Claude Code + GitHub Actions integration for 70+ products.
 
 ## Architecture
 
