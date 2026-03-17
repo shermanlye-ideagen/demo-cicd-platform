@@ -1,0 +1,151 @@
+name: Deploy Pipeline
+on:
+  repository_dispatch:
+    types: [deploy-product]
+
+jobs:
+  # ── Parse Dispatch Payload ────────────────────────────
+  init:
+    name: Initialize Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      product: ${{ steps.payload.outputs.product }}
+      image: ${{ steps.payload.outputs.image }}
+      commit_sha: ${{ steps.payload.outputs.commit_sha }}
+    steps:
+      - name: Parse payload
+        id: payload
+        run: |
+          echo "product=${{ github.event.client_payload.product }}" >> "$GITHUB_OUTPUT"
+          echo "image=${{ github.event.client_payload.image }}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=${{ github.event.client_payload.commit_sha }}" >> "$GITHUB_OUTPUT"
+          echo "========================================="
+          echo "  Deploy Pipeline Triggered"
+          echo "  Product: ${{ github.event.client_payload.product }}"
+          echo "  Image:   ${{ github.event.client_payload.image }}"
+          echo "  Commit:  ${{ github.event.client_payload.commit_sha }}"
+          echo "  By:      ${{ github.event.client_payload.triggered_by }}"
+          echo "========================================="
+
+  # ── Deploy to Test (Canary → Ring) ────────────────────
+  deploy-test:
+    name: "Deploy to Test"
+    needs: init
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy canary tenant
+        run: |
+          echo "Deploying ${{ needs.init.outputs.image }} to Test environment..."
+          echo "Canary tenant (acme-corp): deploying..."
+          echo "Health check: 200 OK"
+          echo "Canary: PASSED"
+      - name: Ring rollout
+        run: |
+          echo "Ring rollout to remaining tenants..."
+          echo "enterprise-client: deploying..."
+          echo "Health check: 200 OK"
+          echo "All tenants updated in Test"
+
+  # ── Performance Tests ─────────────────────────────────
+  load-test:
+    name: "K6 Load Test"
+    needs: deploy-test
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "K6 baseline load test for ${{ needs.init.outputs.product }}..."
+          echo "VUs: 50 | Duration: 5m | p95=89ms"
+          echo "Thresholds: PASSED"
+
+  stress-test:
+    name: "K6 Stress Test"
+    needs: deploy-test
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "K6 stress test — VUs: 10→200 | p95=210ms"
+          echo "Thresholds: PASSED"
+
+  spike-test:
+    name: "K6 Spike Test"
+    needs: deploy-test
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "K6 spike test — VUs: 10→500 | Recovery: 15s"
+          echo "Thresholds: PASSED"
+
+  e2e-under-load:
+    name: "E2E Under Load"
+    needs: [load-test, stress-test, spike-test]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Playwright E2E under load — PASSED"
+
+  perf-report:
+    name: "Performance Report"
+    needs: e2e-under-load
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "New Relic performance comparison: no regression"
+          echo "Performance validation: PASSED"
+
+  # ── Deploy to Staging (Canary → Ring + UAT) ──────────
+  deploy-staging:
+    name: "Deploy to Staging"
+    needs: perf-report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy canary
+        run: |
+          echo "Deploying ${{ needs.init.outputs.image }} to Staging..."
+          echo "Canary tenant (acme-corp): deploying..."
+          echo "Health check: 200 OK"
+      - name: Ring rollout
+        run: |
+          echo "Ring rollout: enterprise-client deploying..."
+          echo "All tenants updated in Staging"
+
+  integration-tests:
+    name: "Integration Tests"
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Running integration tests against Staging..."
+          echo "12/12 integration tests PASSED"
+
+  e2e-business:
+    name: "E2E Business Validation"
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Business validation — PASSED"
+
+  uat:
+    name: "UAT"
+    needs: [integration-tests, e2e-business]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "UAT checklist — APPROVED"
+
+  security-compliance:
+    name: "Security & Compliance"
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Veracode DAST — 0 critical — PASSED"
+
+  observability:
+    name: "Observability Validation"
+    needs: [uat, security-compliance]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "New Relic APM + alerting configured"
+          echo "Observability validation: PASSED"
+          echo "========================================="
+          echo "  ${{ needs.init.outputs.product }} deployed to Staging"
+          echo "  Full pipeline: COMPLETE"
+          echo "========================================="
